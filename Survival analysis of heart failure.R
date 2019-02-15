@@ -11,9 +11,14 @@ df$ReachedEvent <- rep(0,nrow(df))
 df$ReachedEvent[which(df$Event == 1 & df$TIME < event_horizon)] <- 1
 mean(df$ReachedEvent)
 
+df$index <- rep(NA,nrow(df))
+for(i in 1:nrow(df)){
+  df$index[i] = i
+}
+
 survfit_KM <- survfit(Surv(df$TIME,df$Event)~1)
 plot(survfit_KM, conf.int = FALSE, mark.time = FALSE, main = "KM of Congestive Heart Failure Patients",xlab = "Time in days",ylab = "Survival function", lwd = 1)
-lines(vline(90))
+
 
 summary(df)
 
@@ -139,7 +144,7 @@ cases <- df[which(df$ReachedEvent == 1),]
 controls <- df[which(df$TIME > event_horizon),]
 auc <- rbind(cases,controls)
 
-my.roc.rsf <- roc(auc$Event, rsf.auc$r,ci = TRUE)
+my.roc.rsf <- roc(auc$Event,auc$r,ci = TRUE)
 my.auc.rsf <- auc(my.roc.rsf)
 my.auc.rsf
 ci.auc(my.auc.rsf)
@@ -199,12 +204,15 @@ for(r in 1:nrow(df)){
 for(i in 1:B){
   for(j in 1:nrow(df)){
     for(k in 1:nrow(outBag[[i]])){
-      if(outBag[[i]][k,]$index == rlist[[j]][1]) {
+      if(outBag[[i]][k,]$index == rlist[[j]][1]){
         rlist[[j]] = list.append(rlist[[j]],outBag[[i]][k,]$r.cox)
       }
     }
   }
 }
+#############
+
+
 df$r.cox = rep(NA,nrow(df))
 for(i in 1:length(rlist)){
   rmean = mean(rlist[[i]][-1])
@@ -252,20 +260,26 @@ abline(0,1)
 title('Attribute diagram for RSF risks')
 
 
+cases <- df[which(df$ReachedEvent == 1),]
+controls <- df[which(df$TIME > event_horizon),]
+auc <- rbind(cases,controls)
+
 ##AUC and CL for AUC
 my.roc.cox <- roc(auc$Event, auc$r.cox,ci = TRUE)
 my.auc.cox <- auc(my.roc.cox)
 print("Cox PH:")
 my.auc.cox
-ci.auc(my.auc.cox)
+ci.auc.cox = ci.auc(my.auc.cox)
 
 
 print("Random Survival Forest:")
 my.auc.rsf
-ci.auc(my.auc.rsf)
-plot.roc()
+ci.auc.rsf = ci.auc(my.auc.rsf)
 
+
+par(mfrow=c(1,1)) 
 plot.roc(my.roc.rsf,title="Receiver operator curve")
 lines.roc(my.roc.cox, print.auc = TRUE, col = "red")
-legend("bottomright",legend = c("RSF","Cox PH"),lty = 1,col = c("black","red"))
+legend("bottomright",legend = c(paste("RSF. AUC=",round(my.auc.rsf,3),", 95%CI (",round(ci.auc.rsf[1],3),",",round(ci.auc.rsf[2],3),")",sep=""),paste("Cox PH. AUC=",round(my.auc.cox,3)," 95%CI (",round(ci.auc.cox[1],3),", ",round(ci.auc.cox[2],3),")",sep = "")),lty = 1,cex = .7,col = c("black","red"))
 title("Receiver operator curve",line = 2.5)
+
